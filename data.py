@@ -60,8 +60,7 @@ class Stock:
             name = 'Chorvoq'
             position = 0
         else:
-            name = ''
-            position = -1
+            return None
 
         avg30 = Stock.parse_data(row[3])
         avg10 = Stock.parse_data(row[4])
