@@ -38,7 +38,9 @@ class Stock:
     def convert_row_to_stock(table):
         response = []
 
-        for row in table:
+        reservoirs = filter(lambda row: row[0].isnumeric(), table)
+
+        for row in reservoirs:
             reservoir_id = int(row[0])
             name_and_date = row[1].split("\n")
             name = name_and_date[0]

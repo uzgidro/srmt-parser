@@ -52,7 +52,7 @@ def get_required_files_from_rar(rar_path):
     return result_files
 
 
-rar_path = 'arr.rar'
+rar_path = 'test/arr.rar'
 result = get_required_files_from_rar(rar_path)
 
 for folder, files in result.items():

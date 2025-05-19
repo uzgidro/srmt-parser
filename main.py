@@ -10,10 +10,6 @@ from modsnow import Modsnow
 app = FastAPI()
 
 
-def is_reservoir(n):
-    return n[0].isnumeric()
-
-
 @app.post("/parse-stock")
 async def parse_stock(file: UploadFile = File(...)):
     contents = await file.read()
@@ -22,8 +18,7 @@ async def parse_stock(file: UploadFile = File(...)):
     try:
         with pdfplumber.open(pdf_file) as pdf:
             table = pdf.pages[0].extract_tables()[0]
-            reservoirs = filter(is_reservoir, table)
-            response = Stock.convert_row_to_stock(reservoirs)
+            response = Stock.convert_row_to_stock(table)
 
         return JSONResponse(content=response)
 
