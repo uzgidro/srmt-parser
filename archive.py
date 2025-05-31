@@ -1,7 +1,8 @@
-import rarfile
 import re
-from datetime import datetime
 from collections import defaultdict
+
+import rarfile
+
 
 def get_required_files_from_rar(rar_path):
     files_by_folder = defaultdict(list)
@@ -16,12 +17,11 @@ def get_required_files_from_rar(rar_path):
 
             # Проверка на нужное имя папки
             if ("Андижон" in filepath or
-                "ангарон" in filepath or
-                "Сардоба" in filepath or
-                "сорак" in filepath or
-                "поланг" in filepath or
-                "Чорво" in filepath):
-
+                    "ангарон" in filepath or
+                    "Сардоба" in filepath or
+                    "сорак" in filepath or
+                    "поланг" in filepath or
+                    "Чорво" in filepath):
                 folder = filepath.rsplit('/', 1)[0] if '/' in filepath else ''
                 files_by_folder[folder].append(filepath)
 
@@ -46,16 +46,16 @@ def get_required_files_from_rar(rar_path):
 
         result_files[folder] = {
             'snow_cover': snow_cover_file,
-            'max_number_file': max_number_file
+            'snow_dynamics': max_number_file
         }
 
     return result_files
 
 
-rar_path = 'test/arr.rar'
-result = get_required_files_from_rar(rar_path)
-
-for folder, files in result.items():
-    print(f"\nПапка: {folder}")
-    print(f"  snow_cover файл: {files['snow_cover']}")
-    print(f"  max number файл: {files['max_number_file']}")
+# rar_path = 'test/arr.rar'
+# result = get_required_files_from_rar(rar_path)
+#
+# for folder, files in result.items():
+#     print(f"\nПапка: {folder}")
+#     print(f"  snow_cover файл: {files['snow_cover']}")
+#     print(f"  max number файл: {files['max_number_file']}")

@@ -6,6 +6,7 @@ from fastapi.responses import JSONResponse
 
 from data import Stock
 from modsnow import Modsnow
+from archive import get_required_files_from_rar
 
 app = FastAPI()
 
@@ -26,7 +27,7 @@ async def parse_stock(file: UploadFile = File(...)):
         return JSONResponse(status_code=500, content={"error": str(e)})
 
 
-@app.post("/parse-mondsnow")
+@app.post("/parse-modsnow")
 async def parse_stock(file: UploadFile = File(...)):
     contents = await file.read()
     pdf_file = io.BytesIO(contents)
@@ -41,6 +42,19 @@ async def parse_stock(file: UploadFile = File(...)):
             response = Modsnow.parse_modsnow_data(reservoirs)
 
         return JSONResponse(content=response)
+
+    except Exception as e:
+        return JSONResponse(status_code=500, content={"error": str(e)})
+
+
+@app.post("/parse-archive")
+async def parse_archive(file: UploadFile = File(...)):
+    contents = await file.read()
+    rar_file = io.BytesIO(contents)
+
+    try:
+        result_files = get_required_files_from_rar(rar_file)
+        return JSONResponse(content=result_files)
 
     except Exception as e:
         return JSONResponse(status_code=500, content={"error": str(e)})
