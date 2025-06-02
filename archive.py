@@ -40,13 +40,13 @@ def get_required_files_from_rar(rar_path):
                 number = int(match.group(1))
                 numbered_files.append((number, f))
 
-        max_number_file = None
+        snow_dynamics = None
         if numbered_files:
-            max_number_file = max(numbered_files, key=lambda x: x[0])[1]
+            snow_dynamics = max(numbered_files, key=lambda x: x[0])[1]
 
         result_files[folder] = {
             'snow_cover': snow_cover_file,
-            'snow_dynamics': max_number_file
+            'snow_dynamics': snow_dynamics
         }
 
     return result_files

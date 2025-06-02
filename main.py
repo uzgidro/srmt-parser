@@ -6,7 +6,7 @@ from fastapi.responses import JSONResponse
 
 from data import Stock
 from modsnow import Modsnow
-from archive import get_required_files_from_rar
+from s3 import get_required_files_from_rar
 
 app = FastAPI()
 
