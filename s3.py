@@ -64,7 +64,9 @@ def get_required_files_from_rar(rar_file_bytes):
                 if 'snow_cover' in f.lower():
                     snow_cover_file = f
 
-                match = re.search(r'(\d+)\.', f.split('/')[-1])
+                filename = f.split('/')[-1]
+
+                match = re.search(r'(\d+)', filename)
                 if match:
                     number = int(match.group(1))
                     numbered_files.append((number, f))
