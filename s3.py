@@ -9,7 +9,7 @@ import rarfile
 # rarfile.UNRAR_TOOL = "unrar"
 
 client = Minio(
-    "minio:9000",
+    "192.168.40.225:19000",
     access_key="admin",
     secret_key="supersecret",
     secure=False,

@@ -1,5 +1,6 @@
 import io
 
+import pandas as pd
 import pdfplumber
 from fastapi import FastAPI, File, UploadFile
 from fastapi.responses import JSONResponse
@@ -7,6 +8,7 @@ from fastapi.responses import JSONResponse
 from data import Stock
 from modsnow import Modsnow
 from s3 import get_required_files_from_rar
+
 
 app = FastAPI()
 
@@ -28,23 +30,32 @@ async def parse_stock(file: UploadFile = File(...)):
 
 
 @app.post("/parse-modsnow")
-async def parse_stock(file: UploadFile = File(...)):
+async def parse_modsnow(file: UploadFile = File(...)):  # 1. Исправлено имя функции
+    filename = file.filename.lower()
     contents = await file.read()
-    pdf_file = io.BytesIO(contents)
 
     try:
-        with pdfplumber.open(pdf_file) as pdf:
-            table = pdf.pages[0].extract_tables()[0]
-            reservoirs = []
-            for index, row in enumerate(table):
-                if row and row[0] and str(row[0]).strip() == "1":
-                    reservoirs = table[index:]
-            response = Modsnow.parse_modsnow_data(reservoirs)
+        if filename.endswith('.pdf'):
+            print("Processing PDF file...")
+            pdf_file = io.BytesIO(contents)
+            with pdfplumber.open(pdf_file) as pdf:
+                table = pdf.pages[0].extract_tables()[0]
+                reservoirs = []
+                for index, row in enumerate(table):
+                    if row and row[0] and str(row[0]).strip() == "1":
+                        reservoirs = table[index:]
+                response = Modsnow.parse_modsnow_data(reservoirs)
+
+        else:
+            return JSONResponse(
+                status_code=400,
+                content={"error": f"Unsupported file type: '{filename}'. Please upload a PDF or XLSX file."}
+            )
 
         return JSONResponse(content=response)
 
     except Exception as e:
-        return JSONResponse(status_code=500, content={"error": str(e)})
+        return JSONResponse(status_code=500, content={"error": f"Failed to process file: {str(e)}"})
 
 
 @app.post("/parse-archive")
