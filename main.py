@@ -1,65 +1,132 @@
 import io
+import traceback
 
 import pandas as pd
 import pdfplumber
-from fastapi import FastAPI, File, UploadFile
+# 1. Импортируем BackgroundTasks
+from fastapi import FastAPI, File, UploadFile, BackgroundTasks
 from fastapi.responses import JSONResponse
 
+from config import STOCK_FORWARD_URL, MODSNOW_FORWARD_URL
 from data import Stock
+from forwarder import forward_data
 from modsnow import Modsnow
 from s3 import get_required_files_from_rar
-
 
 app = FastAPI()
 
 
-@app.post("/parse-stock")
-async def parse_stock(file: UploadFile = File(...)):
-    contents = await file.read()
+# 2. Создаем "воркер" для обработки stock-файлов
+def process_and_forward_stock(contents: bytes):
+    """
+    Эта функция будет выполняться в фоне.
+    Она парсит данные и вызывает пересылку.
+    """
     pdf_file = io.BytesIO(contents)
-
     try:
         with pdfplumber.open(pdf_file) as pdf:
             table = pdf.pages[0].extract_tables()[0]
-            response = Stock.convert_row_to_stock(table)
+            parsed_data = Stock.convert_row_to_stock(table)
 
-        return JSONResponse(content=response)
+        # ВАЖНО: forward_data теперь тоже должна быть асинхронной,
+        # но мы не можем использовать await в синхронной функции.
+        # Решение - запустить ее в цикле событий.
+        import asyncio
+        asyncio.run(forward_data(url=STOCK_FORWARD_URL, data=parsed_data))
 
     except Exception as e:
-        return JSONResponse(status_code=500, content={"error": str(e)})
+        print("--- BACKGROUND TASK FAILED for /parse-stock ---")
+        traceback.print_exc()
+
+
+# 3. Создаем "воркер" для обработки modsnow-файлов
+def process_and_forward_modsnow(filename: str, contents: bytes):
+    """
+    Эта функция будет выполняться в фоне для /parse-modsnow.
+    """
+    table_data = []
+    try:
+        if filename.endswith('.pdf'):
+            pdf_file = io.BytesIO(contents)
+            with pdfplumber.open(pdf_file) as pdf:
+                raw_table = pdf.pages[0].extract_tables()[0]
+                for index, row in enumerate(raw_table):
+                    if row and row[0] and str(row[0]).strip() == "1":
+                        table_data = raw_table[index:]
+                        break
+        elif filename.endswith('.xlsx'):
+            excel_file = io.BytesIO(contents)
+            df = pd.read_excel(excel_file, header=None)
+            df_cleaned = df.where(pd.notna(df), None)
+            raw_table = df_cleaned.values.tolist()
+            for index, row in enumerate(raw_table):
+                if row and row[0] is not None and str(row[0]).strip() == "1":
+                    table_data = raw_table[index:]
+                    break
+
+        if not table_data:
+            print(f"Could not find data starting row in the file {filename}.")
+            return
+
+        parsed_data = Modsnow.parse_modsnow_data(table_data)
+
+        import asyncio
+        asyncio.run(forward_data(url=MODSNOW_FORWARD_URL, data=parsed_data))
+
+    except Exception as e:
+        print(f"--- BACKGROUND TASK FAILED for /parse-modsnow ({filename}) ---")
+        traceback.print_exc()
+
+
+@app.post("/parse-stock")
+async def parse_stock(
+        background_tasks: BackgroundTasks,  # 4. Добавляем зависимость
+        file: UploadFile = File(...)
+):
+    """
+    Принимает файл, немедленно отвечает 202 и запускает обработку в фоне.
+    """
+    contents = await file.read()
+
+    # 5. Добавляем задачу в очередь и передаем ей содержимое файла
+    background_tasks.add_task(process_and_forward_stock, contents)
+
+    # 6. Немедленно возвращаем ответ
+    return JSONResponse(
+        status_code=202,
+        content={"status": "accepted", "message": "File received and scheduled for processing."}
+    )
 
 
 @app.post("/parse-modsnow")
-async def parse_modsnow(file: UploadFile = File(...)):  # 1. Исправлено имя функции
+async def parse_modsnow(
+        background_tasks: BackgroundTasks,  # Добавляем зависимость
+        file: UploadFile = File(...)
+):
+    """
+    Принимает PDF/XLSX, немедленно отвечает 202 и запускает обработку в фоне.
+    """
+    # Проверяем тип файла до передачи в фон, чтобы быстро отдать ошибку
     filename = file.filename.lower()
+    if not (filename.endswith('.pdf') or filename.endswith('.xlsx')):
+        return JSONResponse(status_code=400, content={"error": "Unsupported file type. Please upload PDF or XLSX."})
+
     contents = await file.read()
 
-    try:
-        if filename.endswith('.pdf'):
-            print("Processing PDF file...")
-            pdf_file = io.BytesIO(contents)
-            with pdfplumber.open(pdf_file) as pdf:
-                table = pdf.pages[0].extract_tables()[0]
-                reservoirs = []
-                for index, row in enumerate(table):
-                    if row and row[0] and str(row[0]).strip() == "1":
-                        reservoirs = table[index:]
-                response = Modsnow.parse_modsnow_data(reservoirs)
+    # Добавляем задачу в очередь
+    background_tasks.add_task(process_and_forward_modsnow, filename, contents)
 
-        else:
-            return JSONResponse(
-                status_code=400,
-                content={"error": f"Unsupported file type: '{filename}'. Please upload a PDF or XLSX file."}
-            )
-
-        return JSONResponse(content=response)
-
-    except Exception as e:
-        return JSONResponse(status_code=500, content={"error": f"Failed to process file: {str(e)}"})
+    # Немедленно возвращаем ответ
+    return JSONResponse(
+        status_code=202,
+        content={"status": "accepted", "message": "File received and scheduled for processing."}
+    )
 
 
 @app.post("/parse-archive")
 async def parse_archive(file: UploadFile = File(...)):
+    # Этот эндпоинт можно оставить как есть, если его обработка быстрая,
+    # или тоже переделать на фоновую задачу по аналогии.
     contents = await file.read()
     rar_file = io.BytesIO(contents)
 

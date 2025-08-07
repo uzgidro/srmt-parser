@@ -5,7 +5,7 @@ from collections import defaultdict
 
 import rarfile
 from minio import Minio
-import rarfile
+
 # rarfile.UNRAR_TOOL = "unrar"
 
 client = Minio(
@@ -14,9 +14,12 @@ client = Minio(
     secret_key="supersecret",
     secure=False,
 )
+
+
 def ensure_bucket(bucket_name):
     if not client.bucket_exists(bucket_name):
         client.make_bucket(bucket_name)
+
 
 def get_object_name(filepath: str):
     mapping = {
@@ -35,6 +38,7 @@ def get_object_name(filepath: str):
 
     return None
 
+
 def get_required_files_from_rar(rar_file_bytes):
     files_by_folder = defaultdict(list)
 
@@ -46,11 +50,11 @@ def get_required_files_from_rar(rar_file_bytes):
                 continue
 
             if ("Андижон" in filepath or
-                "ангарон" in filepath or
-                "Сардоба" in filepath or
-                "сорак" in filepath or
-                "поланг" in filepath or
-                "Чорво" in filepath):
+                    "ангарон" in filepath or
+                    "Сардоба" in filepath or
+                    "сорак" in filepath or
+                    "поланг" in filepath or
+                    "Чорво" in filepath):
                 folder = filepath.rsplit('/', 1)[0] if '/' in filepath else ''
                 files_by_folder[folder].append(filepath)
 
@@ -105,5 +109,11 @@ def get_required_files_from_rar(rar_file_bytes):
 
     return result_files
 
-
-print(get_required_files_from_rar('test/arr.rar'))
+if __name__ == "__main__":
+    # Этот код теперь будет выполняться только при запуске `python s3.py`
+    # и не будет мешать запуску вашего веб-сервера.
+    # Убедитесь, что файл 'test/arr.rar' существует для локального теста.
+    try:
+        print(get_required_files_from_rar('test/arr.rar'))
+    except FileNotFoundError:
+        print("Тестовый файл 'test/arr.rar' не найден. Пропустили тестовый запуск.")
