@@ -1,6 +1,6 @@
 import pdfplumber
 
-from modsnow import Modsnow
+from service.modsnow import Modsnow
 
 with pdfplumber.open("modsnow.pdf") as pdf:
     table = pdf.pages[0].extract_tables()[0]

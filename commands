@@ -1,6 +1,7 @@
 pip freeze > requirements.txt
-docker build -t srmt-pdf .
-docker save srmt-pdf > srmt-pdf.tar
+docker build -t suxa/srmt-parser:1.0.0 .
+docker push suxa/srmt-parser:1.0.0
 
+docker save srmt-pdf > srmt-pdf.tar
 
 uvicorn main:app --port 19789 --reload

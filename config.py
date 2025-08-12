@@ -3,7 +3,11 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-STOCK_FORWARD_URL = os.getenv("STOCK_FORWARD_URL", "http://localhost:9010/sc/stock")
-MODSNOW_FORWARD_URL = os.getenv("MODSNOW_FORWARD_URL", "http://localhost:9010/sc/modsnow")
+STOCK_FORWARD_URL = os.getenv("STOCK_FORWARD_URL")
+MODSNOW_FORWARD_URL = os.getenv("MODSNOW_FORWARD_URL")
 
-API_KEY = os.getenv("API_KEY", "default-key-if-not-set")
+MINIO_ENDPOINT = os.getenv("MINIO_ENDPOINT")
+MINIO_ACCESS_KEY = os.getenv("MINIO_ACCESS_KEY")
+MINIO_SECRET_KEY = os.getenv("MINIO_SECRET_KEY")
+
+API_KEY = os.getenv("API_KEY")

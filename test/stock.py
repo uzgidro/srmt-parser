@@ -1,6 +1,6 @@
 import pdfplumber
 
-from data import Stock
+from service.data import Stock
 
 with pdfplumber.open("stock.pdf") as pdf:
     table = pdf.pages[0].extract_tables()[0]

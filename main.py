@@ -3,15 +3,14 @@ import traceback
 
 import pandas as pd
 import pdfplumber
-# 1. Импортируем BackgroundTasks
 from fastapi import FastAPI, File, UploadFile, BackgroundTasks
 from fastapi.responses import JSONResponse
 
 from config import STOCK_FORWARD_URL, MODSNOW_FORWARD_URL
-from data import Stock
-from forwarder import forward_data
-from modsnow import Modsnow
-from s3 import get_required_files_from_rar
+from service.data import Stock
+from service.forwarder import forward_data
+from service.modsnow import Modsnow
+from service.s3 import get_required_files_from_rar
 
 app = FastAPI()
 

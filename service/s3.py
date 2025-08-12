@@ -6,12 +6,14 @@ from collections import defaultdict
 import rarfile
 from minio import Minio
 
+from config import MINIO_ENDPOINT, MINIO_ACCESS_KEY, MINIO_SECRET_KEY
+
 # rarfile.UNRAR_TOOL = "unrar"
 
 client = Minio(
-    "192.168.40.225:19000",
-    access_key="admin",
-    secret_key="supersecret",
+    MINIO_ENDPOINT,
+    access_key=MINIO_ACCESS_KEY,
+    secret_key=MINIO_SECRET_KEY,
     secure=False,
 )
 
@@ -114,6 +116,6 @@ if __name__ == "__main__":
     # и не будет мешать запуску вашего веб-сервера.
     # Убедитесь, что файл 'test/arr.rar' существует для локального теста.
     try:
-        print(get_required_files_from_rar('test/arr.rar'))
+        print(get_required_files_from_rar('../test/arr.rar'))
     except FileNotFoundError:
         print("Тестовый файл 'test/arr.rar' не найден. Пропустили тестовый запуск.")
