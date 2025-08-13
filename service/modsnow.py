@@ -17,9 +17,13 @@ class Modsnow:
 
     @staticmethod
     def to_int(value):
+        if value is None:
+            return 0
+
         try:
-            return int(value.strip()) if value and value.strip().isdigit() else 0
-        except:
+            float_val = float(value)
+            return int(round(float_val))
+        except (ValueError, TypeError):
             return 0
 
     @staticmethod

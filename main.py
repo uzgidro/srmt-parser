@@ -1,3 +1,4 @@
+import asyncio
 import io
 import traceback
 
@@ -6,7 +7,7 @@ import pdfplumber
 from fastapi import FastAPI, File, UploadFile, BackgroundTasks
 from fastapi.responses import JSONResponse
 
-from config import STOCK_FORWARD_URL, MODSNOW_FORWARD_URL
+from config import MODSNOW_FORWARD_URL, STOCK_FORWARD_URL
 from service.data import Stock
 from service.forwarder import forward_data
 from service.modsnow import Modsnow
@@ -30,7 +31,6 @@ def process_and_forward_stock(contents: bytes):
         # ВАЖНО: forward_data теперь тоже должна быть асинхронной,
         # но мы не можем использовать await в синхронной функции.
         # Решение - запустить ее в цикле событий.
-        import asyncio
         asyncio.run(forward_data(url=STOCK_FORWARD_URL, data=parsed_data))
 
     except Exception as e:
@@ -55,13 +55,34 @@ def process_and_forward_modsnow(filename: str, contents: bytes):
                         break
         elif filename.endswith('.xlsx'):
             excel_file = io.BytesIO(contents)
-            df = pd.read_excel(excel_file, header=None)
-            df_cleaned = df.where(pd.notna(df), None)
-            raw_table = df_cleaned.values.tolist()
-            for index, row in enumerate(raw_table):
-                if row and row[0] is not None and str(row[0]).strip() == "1":
-                    table_data = raw_table[index:]
-                    break
+            all_sheets_dfs = pd.read_excel(excel_file, sheet_name=None, header=None)
+
+            aggregated_data = []
+            # Проходим по каждому листу в файле
+            for sheet_name, df in all_sheets_dfs.items():
+                df_cleaned = df.where(pd.notna(df), None)
+                raw_table_from_sheet = df_cleaned.values.tolist()
+
+                # --- НОВАЯ ДВУХЭТАПНАЯ ЛОГИКА ПОИСКА ---
+                header_found = False
+                for index, row in enumerate(raw_table_from_sheet):
+                    # ЭТАП 1: Ищем строку-заголовок
+                    if not header_found:
+                        for cell in row:
+                            if isinstance(cell, str) and "сув омборлари сув шаклланадиган" in cell.lower():
+                                header_found = True
+                                break  # Нашли заголовок, прекращаем поиск в ячейках
+                        if header_found:
+                            continue  # Переходим к следующей строке, пропуская саму строку-заголовок
+
+                    # ЭТАП 2: После заголовка ищем первую строку с данными (начинается с "1")
+                    if header_found:
+                        if row and row[0] is not None and str(row[0]).strip() == "1":
+                            # Нашли начало данных. Забираем всё отсюда и до конца листа.
+                            aggregated_data.extend(raw_table_from_sheet[index:])
+                            # Завершаем работу с этим листом, переходим к следующему.
+                            break
+            table_data = aggregated_data
 
         if not table_data:
             print(f"Could not find data starting row in the file {filename}.")
@@ -69,7 +90,6 @@ def process_and_forward_modsnow(filename: str, contents: bytes):
 
         parsed_data = Modsnow.parse_modsnow_data(table_data)
 
-        import asyncio
         asyncio.run(forward_data(url=MODSNOW_FORWARD_URL, data=parsed_data))
 
     except Exception as e:
@@ -105,17 +125,12 @@ async def parse_modsnow(
     """
     Принимает PDF/XLSX, немедленно отвечает 202 и запускает обработку в фоне.
     """
-    # Проверяем тип файла до передачи в фон, чтобы быстро отдать ошибку
     filename = file.filename.lower()
     if not (filename.endswith('.pdf') or filename.endswith('.xlsx')):
         return JSONResponse(status_code=400, content={"error": "Unsupported file type. Please upload PDF or XLSX."})
 
     contents = await file.read()
-
-    # Добавляем задачу в очередь
     background_tasks.add_task(process_and_forward_modsnow, filename, contents)
-
-    # Немедленно возвращаем ответ
     return JSONResponse(
         status_code=202,
         content={"status": "accepted", "message": "File received and scheduled for processing."}
