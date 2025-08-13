@@ -35,6 +35,23 @@ class Stock:
         return Data(value=value, diff=diff)
 
     @staticmethod
+    def translate_date_string(date_str: str) -> str:
+        month_translation = {
+            "янв": "yan", "фев": "fev", "мар": "mar",
+            "апр": "apr", "май": "may", "июн": "iun",
+            "июл": "iul", "авг": "avg", "сен": "sen",
+            "окт": "okt", "ноя": "noy", "дек": "dek",
+        }
+
+        translated_str = date_str.lower()
+
+        for rus, lat in month_translation.items():
+            translated_str = translated_str.replace(rus, lat)
+
+        return translated_str
+
+
+    @staticmethod
     def convert_row_to_stock(table):
         response = []
 
@@ -44,7 +61,9 @@ class Stock:
             reservoir_id = int(row[0])
             name_and_date = row[1].split("\n")
             name = name_and_date[0]
-            date = name_and_date[1]
+
+            raw_date = name_and_date[1]
+            date = Stock.translate_date_string(raw_date)
 
             if name.__contains__("Андижон"):
                 name = 'Andijon'
