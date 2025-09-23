@@ -70,15 +70,14 @@ def get_required_files_from_rar(rar_file_bytes):
             numbered_files = []
 
             for f in files:
-                if 'snow_cover' in f.lower():
+                if f.lower().endswith('.png'):
                     snow_cover_file = f
-
-                filename = f.split('/')[-1]
-
-                match = re.search(r'(\d+)', filename)
-                if match:
-                    number = int(match.group(1))
-                    numbered_files.append((number, f))
+                else:
+                    filename = f.split('/')[-1]
+                    match = re.search(r'(\d+)', filename)
+                    if match:
+                        number = int(match.group(1))
+                        numbered_files.append((number, f))
 
             snow_dynamics = None
             if numbered_files:
@@ -86,26 +85,26 @@ def get_required_files_from_rar(rar_file_bytes):
 
             # загрузка в бакеты
             if snow_cover_file:
-                # ensure_bucket("modsnow-cover")
+                ensure_bucket("modsnow-cover")
                 data = rf.read(snow_cover_file)
                 object_name = f"{get_object_name(f"{folder}/{snow_cover_file.split('/')[-1]}")}"
-                # client.put_object(
-                #     "modsnow-cover",
-                #     object_name,
-                #     io.BytesIO(data),
-                #     length=len(data)
-                # )
+                client.put_object(
+                    "modsnow-cover",
+                    object_name,
+                    io.BytesIO(data),
+                    length=len(data)
+                )
 
             if snow_dynamics:
-                # ensure_bucket("modsnow-dynamics")
+                ensure_bucket("modsnow-dynamics")
                 data = rf.read(snow_dynamics)
                 object_name = f"{get_object_name(f"{folder}/{snow_dynamics.split('/')[-1]}")}"
-                # client.put_object(
-                #     "modsnow-dynamics",
-                #     object_name,
-                #     io.BytesIO(data),
-                #     length=len(data)
-                # )
+                client.put_object(
+                    "modsnow-dynamics",
+                    object_name,
+                    io.BytesIO(data),
+                    length=len(data)
+                )
 
             result_files[folder] = {
                 'snow_cover': snow_cover_file,

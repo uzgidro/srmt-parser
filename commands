@@ -1,6 +1,6 @@
 pip freeze > requirements.txt
-docker build -t suxa/srmt-parser:1.1.0 .
-docker push suxa/srmt-parser:1.1.0
+docker build -t suxa/srmt-parser:1.1.1 .
+docker push suxa/srmt-parser:1.1.1
 
 docker save srmt-pdf > srmt-pdf.tar
 
